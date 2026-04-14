@@ -16,7 +16,7 @@ import type {
   DonationMethod,
   GoalPeriod,
   NotificationType,
-} from "@prisma/client";
+} from "@/generated/prisma";
 
 // Re-exportar enums para usar en toda la app
 export type {
