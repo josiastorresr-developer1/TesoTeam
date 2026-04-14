@@ -1,0 +1,214 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────────
+
+enum Role {
+  admin
+  tutor
+}
+
+enum ChildStatus {
+  pendiente  // solicitó ingreso, en revisión
+  activo     // atendido por la fundación
+  inactivo   // ya no está siendo atendido
+}
+
+enum VolunteerStatus {
+  pendiente
+  aprobado
+  rechazado
+}
+
+enum DonorType {
+  persona
+  empresa
+}
+
+enum DonationMethod {
+  transferencia
+  efectivo
+  cheque
+  plataforma // futuro: pago online
+}
+
+enum GoalPeriod {
+  mensual
+  trimestral
+  anual
+}
+
+enum NotificationType {
+  nuevaSolicitudNino
+  nuevaSolicitudVoluntario
+  sistema
+}
+
+// ─────────────────────────────────────────────
+// AUTH / USUARIOS
+// ─────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String
+  role      Role
+  avatarUrl String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  children     Child[]
+  childUpdates ChildUpdate[]
+  newsPosts    NewsPost[]
+  donations    Donation[]
+}
+
+// ─────────────────────────────────────────────
+// NIÑOS
+// ─────────────────────────────────────────────
+
+model Child {
+  id           String      @id @default(uuid())
+  firstName    String
+  lastName     String
+  birthDate    DateTime
+  diagnosis    String
+  notes        String?
+  photoUrl     String?
+  status       ChildStatus @default(pendiente)
+  registeredAt DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  tutorId      String?
+  tutor        User?       @relation(fields: [tutorId], references: [id])
+
+  updates      ChildUpdate[]
+}
+
+// Publicaciones de la admin sobre un niño — visibles en portal familiar
+model ChildUpdate {
+  id        String   @id @default(uuid())
+  title     String
+  content   String
+  isPublic  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  childId   String
+  child     Child    @relation(fields: [childId], references: [id], onDelete: Cascade)
+
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+}
+
+// ─────────────────────────────────────────────
+// VOLUNTARIOS
+// ─────────────────────────────────────────────
+
+model Volunteer {
+  id           String          @id @default(uuid())
+  firstName    String
+  lastName     String
+  email        String
+  phone        String?
+  motivation   String?
+  skills       String?
+  status       VolunteerStatus @default(pendiente)
+  notes        String?
+  registeredAt DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+}
+
+// ─────────────────────────────────────────────
+// FINANZAS
+// ─────────────────────────────────────────────
+
+model Donor {
+  id        String    @id @default(uuid())
+  name      String
+  type      DonorType
+  email     String?
+  phone     String?
+  company   String?
+  notes     String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  donations Donation[]
+}
+
+model Donation {
+  id             String         @id @default(uuid())
+  amount         Decimal        @db.Decimal(12, 2)
+  method         DonationMethod @default(transferencia)
+  date           DateTime
+  notes          String?
+  receiptUrl     String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  donorId        String
+  donor          Donor          @relation(fields: [donorId], references: [id])
+
+  registeredById String
+  registeredBy   User           @relation(fields: [registeredById], references: [id])
+}
+
+model Expense {
+  id          String   @id @default(uuid())
+  description String
+  amount      Decimal  @db.Decimal(12, 2)
+  category    String
+  date        DateTime
+  receiptUrl  String?
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model FinancialGoal {
+  id        String     @id @default(uuid())
+  label     String
+  target    Decimal    @db.Decimal(12, 2)
+  period    GoalPeriod
+  startDate DateTime
+  endDate   DateTime
+  isActive  Boolean    @default(true)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+// ─────────────────────────────────────────────
+// NOTICIAS — feed interno del dashboard admin
+// ─────────────────────────────────────────────
+
+model NewsPost {
+  id        String   @id @default(uuid())
+  title     String
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+}
+
+// ─────────────────────────────────────────────
+// NOTIFICACIONES
+// ─────────────────────────────────────────────
+
+model Notification {
+  id        String           @id @default(uuid())
+  type      NotificationType
+  title     String
+  body      String
+  read      Boolean          @default(false)
+  refId     String?          // id del niño o voluntario relacionado
+  createdAt DateTime         @default(now())
+}
