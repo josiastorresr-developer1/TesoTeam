@@ -52,6 +52,13 @@ enum NotificationType {
   sistema
 }
 
+enum FeedEventType {
+  donacionRegistrada
+  ninoAprobado
+  ninoIngresado
+  voluntarioAprobado
+}
+
 // ─────────────────────────────────────────────
 // AUTH / USUARIOS
 // ─────────────────────────────────────────────
@@ -186,18 +193,29 @@ model FinancialGoal {
 }
 
 // ─────────────────────────────────────────────
-// NOTICIAS — feed interno del dashboard admin
+// FEED — noticias manuales + eventos del sistema
 // ─────────────────────────────────────────────
 
 model NewsPost {
   id        String   @id @default(uuid())
   title     String
   content   String
+  isPublic  Boolean  @default(true) // true = visible para familias, false = solo admin
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   authorId  String
   author    User     @relation(fields: [authorId], references: [id])
+}
+
+// Eventos automáticos del sistema — solo visibles para admin
+model FeedEvent {
+  id        String        @id @default(uuid())
+  type      FeedEventType
+  title     String
+  body      String
+  refId     String?       // id del recurso relacionado (niño, donación, etc.)
+  createdAt DateTime      @default(now())
 }
 
 // ─────────────────────────────────────────────
